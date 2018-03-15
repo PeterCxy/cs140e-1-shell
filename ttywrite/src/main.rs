@@ -49,10 +49,37 @@ struct Opt {
 
 fn main() {
     use std::fs::File;
-    use std::io::{self, BufReader, BufRead};
+    use std::io::{self, Read};
 
     let opt = Opt::from_args();
     let mut serial = serial::open(&opt.tty_path).expect("path points to invalid TTY");
+    serial.set_timeout(Duration::from_secs(opt.timeout)).expect("Invalid timeout");
 
-    // FIXME: Implement the `ttywrite` utility.
+    let mut settings = serial.read_settings().expect("Invalid serial port");
+    settings.set_baud_rate(opt.baud_rate).expect("Invalid baud rate");
+    settings.set_char_size(opt.char_width);
+    settings.set_stop_bits(opt.stop_bits);
+    serial.write_settings(&settings).expect("Failed to set tty mode");
+
+    let mut reader: Box<Read> = if let Some(ref path) = opt.input {
+        Box::new(File::open(path).expect("Cannot open file"))
+    } else {
+        Box::new(std::io::stdin())
+    };
+
+    let written = if !opt.raw {
+        Xmodem::transmit_with_progress(reader, serial, show_progress).expect("Failed to transfer data") as u64
+    } else {
+        io::copy(&mut reader, &mut serial).expect("Failed to transfer data")
+    };
+
+    println!("> Written {} bytes", written);
+}
+
+fn show_progress(p: Progress) {
+    match p {
+        Progress::Waiting => println!("> Waiting for remote..."),
+        Progress::Started => println!("> Transmission started."),
+        Progress::Packet(size) => println!("> Sent {} bytes to remote", size)
+    }
 }
