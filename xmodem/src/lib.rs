@@ -337,7 +337,9 @@ impl<T: io::Read + io::Write> Xmodem<T> {
                 self.packet += 1;
                 return Ok(buf.len());
             } else if byte == NAK {
-                return Err(io::Error::new(io::ErrorKind::Interrupted, "checksum failed"))
+                return Err(io::Error::new(io::ErrorKind::Interrupted, "checksum failed"));
+            } else {
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "unknown packet"));
             }
         }
     }
