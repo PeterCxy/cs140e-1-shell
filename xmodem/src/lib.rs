@@ -257,7 +257,11 @@ impl<T: io::Read + io::Write> Xmodem<T> {
             self.expect_byte_or_cancel(cur_packet, "out of order")?;
             self.expect_byte_or_cancel(complement(cur_packet), "out of order")?;
             self.inner.read_exact(buf)?;
-            if self.read_byte(true)? == checksum(buf) {
+
+            // The checksum sent by the remote might be equal to CAN
+            // so we do not abort even if we receive CAN - just treat it as NAK if so.
+            let remote_checksum = self.read_byte(false)?;
+            if remote_checksum == checksum(buf) {
                 self.write_byte(ACK)?;
                 (self.progress)(Progress::Packet(128));
                 self.packet += 1;
