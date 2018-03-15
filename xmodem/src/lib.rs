@@ -360,10 +360,10 @@ impl<T: io::Read + io::Write> Xmodem<T> {
     }
 }
 
-// 256 - x, for packet numbers
+// 255 - x, for packet numbers
 #[inline(always)]
 fn complement(val: u8) -> u8 {
-    (256u16 - val as u16) as u8
+    255 - val
 }
 
 // Calculate checksum for a packet
