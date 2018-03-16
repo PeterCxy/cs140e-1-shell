@@ -264,7 +264,12 @@ impl<T: io::Read + io::Write> Xmodem<T> {
             if remote_checksum == checksum(buf) {
                 self.write_byte(ACK)?;
                 (self.progress)(Progress::Packet(buf.len() as u8));
-                self.packet += 1;
+                if self.packet < 255 {
+                    self.packet += 1;
+                } else {
+                    self.packet = 0;
+                }
+                self.flush()?;
                 return Ok(buf.len());
             } else {
                 self.write_byte(NAK)?;
@@ -338,7 +343,11 @@ impl<T: io::Read + io::Write> Xmodem<T> {
             let byte = self.read_byte(true)?;
             if byte == ACK {
                 (self.progress)(Progress::Packet(buf.len() as u8));
-                self.packet += 1;
+                if self.packet < 255 {
+                    self.packet += 1;
+                } else {
+                    self.packet = 0;
+                }
                 return Ok(buf.len());
             } else if byte == NAK {
                 return Err(io::Error::new(io::ErrorKind::Interrupted, "checksum failed"));
